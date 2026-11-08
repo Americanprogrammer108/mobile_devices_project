@@ -1,0 +1,46 @@
+import 'package:flutter/material.dart';
+
+import '../theme/app_theme.dart';
+import '../utils/expiry_utils.dart';
+
+Color expiresColor(int days) =>
+    days <= 1 ? AppColors.iconRed : AppColors.fontOrange;
+
+class ExpiryBadge extends StatelessWidget {
+  const ExpiryBadge({super.key, required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    final (background, foreground) = switch (days) {
+      <= 1 => (AppColors.badgeRed, AppColors.iconRed),
+      <= expiringSoonDays => (AppColors.badgeYellow, AppColors.fontOrange),
+      _ => (AppColors.badgeGreen, AppColors.fontGreen),
+    };
+    final label = switch (days) {
+      < 0 => 'Expired',
+      0 => 'Today',
+      1 => '1 day',
+      _ => '$days days',
+    };
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 66),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+      )
+    );
+  }
+}
