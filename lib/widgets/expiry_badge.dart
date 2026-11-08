@@ -26,15 +26,15 @@ class ExpiryBadge extends StatelessWidget {
     };
 
     return Container(
-      constraints: const BoxConstraints(minWidth: 66),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      alignment: Alignment.center,
+      constraints: const BoxConstraints(minWidth: 70),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         label,
+        textAlign: TextAlign.center,
         style: TextStyle(
           color: foreground,
           fontSize: 13,
