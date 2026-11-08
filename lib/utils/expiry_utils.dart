@@ -30,7 +30,7 @@ int compareByExpiry(PantryItem a, PantryItem b) {
   return aDays.compareTo(bDays);
 }
 
-String formateDate(DateTime date) => 
+String formatDate(DateTime date) => 
 '${_months[date.month - 1]} ${date.day}, ${date.year}';
 
 String quantityLabel(PantryItem item) =>  
