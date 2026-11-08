@@ -78,6 +78,7 @@ class _PantryScreenState extends State<PantryScreen> {
                           final days = daysUntilExpiry(item);
                           final date = item.expirationDate;
                           return ListTile(
+                            tileColor: AppColors.bannerWhite,
                             title: Text(item.name),
                             subtitle: Text(
                               '${quantityLabel(item)}\n'
