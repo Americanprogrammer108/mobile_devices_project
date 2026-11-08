@@ -47,7 +47,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              Navigator.pushReplacement(
+              Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => const ProductSearchScreen(),
