@@ -1,6 +1,28 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:mobile_devices_project/screens/pantry_screen.dart';
+// import 'package:mobile_devices_project/screens/product_lookup_page.dart';
+import 'package:mobile_devices_project/screens/sign_in.dart';
+import 'firebase_options.dart';
 
-void main() {
+import 'package:openfoodfacts/openfoodfacts.dart' as off;
+
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  off.OpenFoodAPIConfiguration.userAgent = off.UserAgent(
+    name: 'MyFoodApp',
+    url: 'https://myfoodapp.example.com', // or an email contact
+  );
+  off.OpenFoodAPIConfiguration.globalLanguages = [off.OpenFoodFactsLanguage.ENGLISH];
+  off.OpenFoodAPIConfiguration.globalCountry = off.OpenFoodFactsCountry.USA;
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const MyApp());
 }
 
@@ -30,10 +52,42 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: AuthGate(),
     );
   }
 }
+//Need a couple components
+//Firebase authentication service, which is used for user login
+//Firebase SDK, which is used to interact with the firebase when logged in
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final user = snapshot.data;
+        return user == null ? const SignInScreen() : PantryScreen(user: user);
+      },
+    );
+  }
+}
+/*
+
+
+
+
+
+
+
+
+*/
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
