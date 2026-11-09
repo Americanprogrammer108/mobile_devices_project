@@ -19,11 +19,22 @@ class AppRoutes {
 
   static final Map<String, WidgetBuilder> routes = {
     home: (_) => const BottomNav(),
-    productDetails: (_) => const ProductDetailsScreen(),
+    productDetails: (context) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+
+      if (args is Map<String, dynamic>) {
+        // If a full product map was passed from the search list
+        return ProductDetailsScreen(localProduct: args);
+      } else if (args is String) {
+        // If just a barcode string was passed from the scanner
+        return ProductDetailsScreen(barcode: args);
+      } else {
+        // Fallback if no valid argument was provided
+        return const ProductDetailsScreen();
+      }
+    },
     scanner: (_) => const BarcodeScannerScreen(),
     history: (_) => const HistoryScreen(),
     settings: (_) => const SettingsScreen(),
   };
 }
-
-
