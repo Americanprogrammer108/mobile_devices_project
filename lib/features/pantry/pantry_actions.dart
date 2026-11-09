@@ -5,11 +5,18 @@ import '../../theme/app_theme.dart';
 import '../../widgets/pantry_item_popup.dart';
 import 'pantry_data_source.dart';
 
+
+/**
+ * Opens the app dialog (pop-up) and saves the new item. Shows a snackbar
+ * when it is done.
+ *////
 Future<void> addPantryItem(BuildContext context) async {
   final item = await showDialog<PantryItem>(
     context: context,
     builder: (_) => const PantryItemDialog(),
   );
+  
+  //Stop if the user pressed Cancel or left the screen
   if (item == null || !context.mounted) return;
   await _run(
     context,
@@ -18,11 +25,17 @@ Future<void> addPantryItem(BuildContext context) async {
   );
 }
 
+/**
+ * Opens the dialog filled with the item's details and save the changes.
+ * Shows a snackbar when it's gone
+ *////
 Future<void> editPantryItem(BuildContext context, PantryItem exisiting) async {
   final item = await showDialog<PantryItem>(
     context: context,
     builder: (_) => PantryItemDialog(exisiting: exisiting),
   );
+
+  //Stop if the user pressed Cancel or left the screen
   if (item == null || !context.mounted) return;
   await _run(
     context,
@@ -31,6 +44,10 @@ Future<void> editPantryItem(BuildContext context, PantryItem exisiting) async {
   );
 }
 
+/**
+ * Asks the user to confirm, then deletes the item. Shows a snackbar
+ * when its done
+ *////
 Future<void> deletePantryItem(BuildContext context, PantryItem item) async {
   final confirmed = await showDialog<bool>(
     context: context,
@@ -50,6 +67,8 @@ Future<void> deletePantryItem(BuildContext context, PantryItem item) async {
       ],
     ),
   );
+
+  // Stop unless the user pressed delete
   if (confirmed != true || !context.mounted) return;
   await _run(
     context,
@@ -58,18 +77,28 @@ Future<void> deletePantryItem(BuildContext context, PantryItem item) async {
   );
 }
 
+/**
+ * Runs a save or delete, then shows a snackbar with the result. Shows
+ * an error message instead if something goes wrong.
+ */
+///
 Future<void> _run(
   BuildContext context,
   Future<void> Function() action,
   String successMessage,
 ) async {
   String message = successMessage;
+
   try {
     await action();
   } catch (error) {
     message = 'Something went wrong: $error';
   }
+
+  //The screen may have closed while saving
   if (!context.mounted) return;
+
+  //Remove any old snackbar, then show the new one 
   ScaffoldMessenger.of(context)
     ..clearSnackBars()
     ..showSnackBar(

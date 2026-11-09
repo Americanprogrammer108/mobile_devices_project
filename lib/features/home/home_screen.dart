@@ -11,6 +11,11 @@ import '../pantry/pantry_actions.dart';
 import '../pantry/pantry_data_source.dart';
 import '../pantry/pantry_screen.dart';
 
+/**
+ * The home screen that shows a pantry overview, the items expiring (soonest first), and
+ * an Add Item button.
+ */
+///
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -19,9 +24,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  //Live count of items on the shopping list and live pantry items
   final _items = pantryDataSource.watchItems();
   final _shoppingCount = pantryDataSource.watchShoppingListCount();
 
+  // opens the full Pantry screen
   void _openFullPantry() {
     Navigator.push(
       context,

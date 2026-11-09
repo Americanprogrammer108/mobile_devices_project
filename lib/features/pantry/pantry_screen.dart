@@ -10,6 +10,14 @@ import '../../widgets/expiry_badge.dart';
 import 'pantry_data_source.dart';
 import 'pantry_actions.dart';
 
+/**
+ * Displays every item in the user's pantry
+ * 
+ * Items are sorted by expiry date (soonest first) and can be filtered
+ * by category. Each row offers edit and delete actions, and the bottom bar 
+ * lets the user add a new item. 
+ */
+///
 class PantryScreen extends StatefulWidget {
   const PantryScreen({super.key});
 
@@ -18,6 +26,8 @@ class PantryScreen extends StatefulWidget {
 }
 
 class _PantryScreenState extends State<PantryScreen> {
+
+  // Created once so reubuilding the widget does not restart the stream
   final _items = pantryDataSource.watchItems();
   String _filter = 'All';
 
