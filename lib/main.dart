@@ -1,13 +1,20 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:mobile_devices_project/screens/pantry_screen.dart';
-// import 'package:mobile_devices_project/screens/product_lookup_page.dart';
+import 'package:mobile_devices_project/routing/app_routes.dart';
 import 'package:mobile_devices_project/screens/sign_in.dart';
+import 'package:mobile_devices_project/services/expiry_notification_binding.dart';
+import 'package:mobile_devices_project/services/notification_services.dart';
+import 'package:mobile_devices_project/theme/app_theme.dart';
+import 'bottom_nav.dart';
+import 'features/barcode_scanner/barcode_scanner_screen.dart';
+import 'features/history/history_screen.dart';
+import 'features/product_details/product_details_screen.dart';
+import 'features/settings/settings_screen.dart';
 import 'firebase_options.dart';
 
 import 'package:openfoodfacts/openfoodfacts.dart' as off;
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,46 +23,87 @@ Future<void> main() async {
     name: 'MyFoodApp',
     url: 'https://myfoodapp.example.com', // or an email contact
   );
-  off.OpenFoodAPIConfiguration.globalLanguages = [off.OpenFoodFactsLanguage.ENGLISH];
+  off.OpenFoodAPIConfiguration.globalLanguages = [
+    off.OpenFoodFactsLanguage.ENGLISH,
+  ];
   off.OpenFoodAPIConfiguration.globalCountry = off.OpenFoodFactsCountry.USA;
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  await startAppServices();
   runApp(const MyApp());
+}
+
+Stream<List<PantryReminder>> watchPantryReminders(String uid) {
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(uid)
+      .collection('items')
+      .snapshots()
+      .map((snapshot) {
+        final reminders = <PantryReminder>[];
+
+        for (final document in snapshot.docs) {
+          final data = document.data();
+          final remindAt = data['remindAt'];
+
+          if (remindAt is! Timestamp) continue;
+
+          reminders.add(
+            PantryReminder(
+              id: document.id,
+              name: data['name'] as String? ?? 'Unnamed item',
+              remindAt: remindAt.toDate(),
+            ),
+          );
+        }
+
+        return reminders;
+      })
+      .handleError((Object error) {
+        debugPrint('Firestore reminder stream ERROR: $error');
+      });
+}
+
+late final NotificationService notificationService;
+late final ExpiryNotificationBinding notificationBinding;
+
+Future<void> startAppServices() async {
+  notificationService = await NotificationService.create();
+
+  notificationBinding = ExpiryNotificationBinding(notificationService);
+
+  FirebaseAuth.instance.authStateChanges().listen((user) async {
+    if (user == null) {
+      await notificationBinding.stop(clearNotifications: true);
+      return;
+    }
+
+    await notificationBinding.start(watchPantryReminders(user.uid));
+  });
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: AuthGate(),
+      title: 'Smart Pantry',
+      theme: AppTheme.light,
+      home: const AuthGate(),
+      // Keep the skeleton routes for settings/history/product detail/etc.
+      // Its '/' route is deliberately omitted: AuthGate owns the app entry.
+      routes: {
+        AppRoutes.productDetails: (_) => const ProductDetailsScreen(),
+        AppRoutes.scanner: (_) => const BarcodeScannerScreen(),
+        AppRoutes.history: (_) => const HistoryScreen(),
+        AppRoutes.settings: (_) => const SettingsScreen(),
+      },
     );
   }
 }
+
 //Need a couple components
 //Firebase authentication service, which is used for user login
 //Firebase SDK, which is used to interact with the firebase when logged in
@@ -73,7 +121,7 @@ class AuthGate extends StatelessWidget {
           );
         }
         final user = snapshot.data;
-        return user == null ? const SignInScreen() : PantryScreen(user: user);
+        return user == null ? const SignInScreen() : BottomNav(user: user);
       },
     );
   }
