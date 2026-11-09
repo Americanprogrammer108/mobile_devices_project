@@ -16,8 +16,8 @@ class BottomNav extends StatefulWidget {
 class _BottomNavState extends State<BottomNav> {
   int _currentTab = 0;
 
-  final _tabs = const [
-    HomeScreen(),
+  late final List<Widget> _tabs = [
+    HomeScreen(onSeeAll: () => _onTabTapped(1)),
     PantryScreen(),
     ShoppingListScreen(),
     ProductSearchScreen(),

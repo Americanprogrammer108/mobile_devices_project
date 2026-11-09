@@ -9,7 +9,6 @@ import '../../widgets/expiry_badge.dart';
 
 import '../pantry/pantry_actions.dart';
 import '../pantry/pantry_data_source.dart';
-import '../pantry/pantry_screen.dart';
 
 /**
  * The home screen that shows a pantry overview, the items expiring (soonest first), and
@@ -17,7 +16,9 @@ import '../pantry/pantry_screen.dart';
  */
 ///
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.onSeeAll});
+
+  final VoidCallback? onSeeAll;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,14 +28,6 @@ class _HomeScreenState extends State<HomeScreen> {
   //Live count of items on the shopping list and live pantry items
   final _items = pantryDataSource.watchItems();
   final _shoppingCount = pantryDataSource.watchShoppingListCount();
-
-  // opens the full Pantry screen
-  void _openFullPantry() {
-    Navigator.push(
-      context,
-      MaterialPageRoute<void>(builder: (_) => const PantryScreen()),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const Spacer(),
                   TextButton(
-                    onPressed: _openFullPantry,
+                    onPressed: widget.onSeeAll,
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.fontGreen,
                     ),
