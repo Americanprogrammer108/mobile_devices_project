@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/open_food_facts_service.dart';
+import '../../routing/app_routes.dart';
+import '../../models/pantry_item.dart';
+import 'package:mobile_devices_project/features/pantry/pantry_data_source.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final String? barcode;
@@ -27,13 +30,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           'name': widget.localProduct!['name'],
           'brand': widget.localProduct!['brand'],
           'category': widget.localProduct!['category'],
-          'imageUrl': '',
-          'packageSize': widget.localProduct!['size'],
+          'imageUrl': widget.localProduct!['imageUrl'] ?? '',
+          'packageSize': widget.localProduct!['size'] ?? '',
         };
         _isLoading = false;
       });
     } else if (widget.barcode != null) {
-      _fetchProductDetails(widget.barcode!); // Add the argument here!
+      _fetchProductDetails(widget.barcode!);
     }
   }
 
@@ -110,11 +113,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
     final product = _productData!;
     final imageUrl = product['imageUrl'] as String?;
-    final name = product['name'] as String;
-    final brand = product['brand'] as String;
-    final category = product['category'] as String;
-    final packageSize = product['packageSize'] as String;
-    final barcode = product['barcode'] as String;
+    final name = product['name'] as String? ?? 'Unknown Product';
+    final brand = product['brand'] as String? ?? '';
+    final category = product['category'] as String? ?? 'General';
+    final packageSize = product['packageSize'] as String? ?? '';
+    final barcode = product['barcode'] as String? ?? 'N/A';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -187,9 +190,39 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
           // Action Button to Add to Pantry
           ElevatedButton.icon(
-            onPressed: () {
-              // Pass the fetched product details to your Add to Pantry page if needed
-              // Navigator.pushNamed(context, AppRoutes.addToPantry, arguments: product);
+            onPressed: () async {
+              try {
+                // 1. Create a PantryItem with all required fields
+                final pantryItem = PantryItem(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  name: name,
+                  category: category.isNotEmpty ? category : 'General',
+                  quantity: 1, // Default quantity
+                  unit: 'pcs', // Default unit
+                );
+
+                // 2. Save it to your pantry data source
+                await pantryDataSource.addItem(pantryItem);
+
+                if (!context.mounted) return;
+
+                // 3. Show success feedback and return to the previous screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$name added to your pantry!'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                Navigator.pop(context);
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to add to pantry: $e'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             },
             icon: const Icon(Icons.add_shopping_cart),
             label: const Text('Add to Pantry'),
