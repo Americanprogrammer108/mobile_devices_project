@@ -19,7 +19,10 @@ class AppRoutes {
 
   static final Map<String, WidgetBuilder> routes = {
     home: (_) => const BottomNav(),
-    productDetails: (_) => const ProductDetailsScreen(),
+    productDetails: (context) {
+      final barcode = ModalRoute.of(context)!.settings.arguments as String;
+      return ProductDetailsScreen(barcode: barcode);
+    },
     scanner: (_) => const BarcodeScannerScreen(),
     history: (_) => const HistoryScreen(),
     settings: (_) => const SettingsScreen(),

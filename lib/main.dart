@@ -95,7 +95,10 @@ class SmartPantryApp extends StatelessWidget {
       // Keep the skeleton routes for settings/history/product detail/etc.
       // Its '/' route is deliberately omitted: AuthGate owns the app entry.
       routes: {
-        AppRoutes.productDetails: (_) => const ProductDetailsScreen(),
+        AppRoutes.productDetails: (context) {
+          final barcode = ModalRoute.of(context)!.settings.arguments as String;
+          return ProductDetailsScreen(barcode: barcode);
+        },
         AppRoutes.scanner: (_) => const BarcodeScannerScreen(),
         AppRoutes.history: (_) => const HistoryScreen(),
         AppRoutes.settings: (_) => const SettingsScreen(),
