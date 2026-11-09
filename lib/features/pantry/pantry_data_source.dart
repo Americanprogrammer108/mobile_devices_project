@@ -1,8 +1,21 @@
 import 'dart:async';
+
+import '../../services/firebase_service.dart';
 import '../../models/pantry_item.dart';
 
+
+/**
+ * The blueprint that the pantry data source must be able to do
+ * 
+ * The screens only use these methods, so we can switch between sample 
+ * data and Firestore without changing the screens
+ *////
 abstract class PantryDataSource {
+
+  // Sends the item list every time it changes 
   Stream<List<PantryItem>> watchItems();
+
+  // Sends the number of items on the shopping list
   Stream<int> watchShoppingListCount();
 
   Future<void> addItem(PantryItem item);
@@ -10,20 +23,52 @@ abstract class PantryDataSource {
   Future<void> deleteItem(String id);
 }
 
-// Switch this to the real data source once backend is done
-PantryDataSource pantryDataSource = SamplePantryDataSource();
+/**
+ * Pantry data from Firestore's `pantry_items` collection.
+ *////
+class FireStonePantryDataSource implements PantryDataSource {
+  final _service = FirestoreService();
 
+  @override
+  Stream<List<PantryItem>> watchItems() => _service.getPantryItems();
+
+  @override
+  Stream<int> watchShoppingListCount() => Stream.value(0);
+
+  @override
+  Future<void> addItem(PantryItem item) => _service.addPantryItem(item);
+
+  @override
+  Future<void> updateItem(PantryItem item) => _service.updatePantryItem(item);
+
+  @override
+  Future<void> deleteItem(String id) => _service.deletePantryItem(id);
+}
+
+// Switch this to the real data source once backend is done
+final PantryDataSource pantryDataSource = SamplePantryDataSource();
+
+
+/**
+ * Fake pantry data stored in memory. Resets every time the app restarts.
+ *////
 class SamplePantryDataSource implements PantryDataSource {
   SamplePantryDataSource() : _items = _sampleItems();
 
   List<PantryItem> _items;
+
+  // Starts at 1000 so new ids never match the sample ids
   int _nextId = 1000;
+
+  // Sends the updated list to the screens
   final _changes = StreamController<List<PantryItem>>.broadcast();
 
   @override
   Stream<List<PantryItem>> watchItems() {
     return Stream.multi((listener) {
+      //Send the current list 
       listener.add(_items);
+      //send every update after that
       final subscription = _changes.stream.listen(listener.add);
       listener.onCancel = subscription.cancel;
     });
@@ -60,28 +105,33 @@ class SamplePantryDataSource implements PantryDataSource {
     _publish(_items.where((item) => item.id != id).toList());
   }
 
+  // Saves the new list and sends it to the other screens
   void _publish(List<PantryItem> items) {
     _items = items;
     _changes.add(items);
   }
 
+  /**
+   * Creates the starting items. Expiry dates are based on today.
+   *////
   static List<PantryItem> _sampleItems() {
     final now = DateTime.now();
     var nextId = 0;
 
+    // Used only for sample data 
     PantryItem sample(
-      String name, 
+      String name,
       String category,
       int quantity,
       String unit,
       int daysLeft,
     ) {
       return PantryItem(
-        id: 'sample-${nextId++}', 
-        name: name, 
-        category: category, 
-        quantity: quantity, 
-        unit: unit, 
+        id: 'sample-${nextId++}',
+        name: name,
+        category: category,
+        quantity: quantity,
+        unit: unit,
         expirationDate: DateTime(now.year, now.month, now.day + daysLeft),
       );
     }
@@ -114,4 +164,3 @@ class SamplePantryDataSource implements PantryDataSource {
     ];
   }
 }
-
