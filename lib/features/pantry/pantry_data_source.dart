@@ -1,0 +1,217 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../../services/firestore_service.dart';
+import '../../services/expiry_reminder_time.dart';
+import '../../models/pantry_item.dart';
+
+/**
+ * The blueprint that the pantry data source must be able to do
+ * 
+ * The screens only use these methods, so we can switch between sample 
+ * data and Firestore without changing the screens
+ */
+///
+abstract class PantryDataSource {
+  // Sends the item list every time it changes
+  Stream<List<PantryItem>> watchItems();
+
+  // Sends the number of items on the shopping list
+  Stream<int> watchShoppingListCount();
+
+  Future<void> addItem(PantryItem item);
+  Future<void> updateItem(PantryItem item);
+  Future<void> deleteItem(String id);
+}
+
+/**
+ * Reads and writes the signed-in user's items in users/{uid}/items
+ */
+///
+class FireStonePantryDataSource implements PantryDataSource {
+  final FirestoreService _service = FirestoreService();
+
+  // Sends the user's items, newest first, every time they change
+  @override
+  Stream<List<PantryItem>> watchItems() {
+    return _service.items
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map(_fromDoc).toList());
+  }
+
+  //Placeholder until the shopping list has a backend
+  @override
+  Stream<int> watchShoppingListCount() => Stream.value(0);
+
+  //Saves a new item to Firestore
+  @override
+  Future<void> addItem(PantryItem item) async {
+    await _service.items.add({
+      ..._toData(item),
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdBy': FirebaseAuth.instance.currentUser?.uid,
+    });
+  }
+
+  // Saves changes to an existing item
+  @override
+  Future<void> updateItem(PantryItem item) async {
+    await _service.items.doc(item.id).update(_toData(item));
+  }
+
+  // Deletes an item. Its remind is cancelled once the document is gone
+  @override
+  Future<void> deleteItem(String id) => _service.items.doc(id).delete();
+
+  // Builds the data saved to Firestore for an item
+  Map<String, dynamic> _toData(PantryItem item) {
+    // The notification code schedules reminders from this saved time
+    final remindAt = calculateExpiryReminder(item.expirationDate);
+    return {
+      ...item.toFirestore(),
+      // The barcode add page still reads and writes count
+      'count': item.quantity,
+      'remindAt': remindAt == null ? null : Timestamp.fromDate(remindAt),
+    };
+  }
+
+  /**
+   * Turns a Firestore document into a PantryItem. Used instead of PantryItem.fromFirestore
+   * which crashes on items saved with 'count' instead of 'quantity' and 'unit'.
+   *////
+  PantryItem _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data();
+    return PantryItem(
+      id: doc.id,
+      name: data['name'] as String? ?? 'Unnamed',
+      category: data['category'] as String? ?? 'Other',
+      quantity: ((data['quantity'] ?? data['count']) as num?)?.toInt() ?? 1,
+      unit: data['unit'] as String? ?? '',
+      expirationDate: (data['expirationDate'] as Timestamp?)?.toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
+    );
+  }
+}
+
+// Switch this to the real data source once backend is done
+final PantryDataSource pantryDataSource = FireStonePantryDataSource();
+
+/**
+ * Fake pantry data stored in memory. Resets every time the app restarts.
+ */
+///
+class SamplePantryDataSource implements PantryDataSource {
+  SamplePantryDataSource() : _items = _sampleItems();
+
+  List<PantryItem> _items;
+
+  // Starts at 1000 so new ids never match the sample ids
+  int _nextId = 1000;
+
+  // Sends the updated list to the screens
+  final _changes = StreamController<List<PantryItem>>.broadcast();
+
+  @override
+  Stream<List<PantryItem>> watchItems() {
+    return Stream.multi((listener) {
+      //Send the current list
+      listener.add(_items);
+      //send every update after that
+      final subscription = _changes.stream.listen(listener.add);
+      listener.onCancel = subscription.cancel;
+    });
+  }
+
+  @override
+  Stream<int> watchShoppingListCount() => Stream.value(5);
+
+  @override
+  Future<void> addItem(PantryItem item) async {
+    _publish([
+      ..._items,
+      PantryItem(
+        id: '${_nextId++}',
+        name: item.name,
+        category: item.category,
+        quantity: item.quantity,
+        unit: item.unit,
+        expirationDate: item.expirationDate,
+        createdAt: DateTime.now(),
+      ),
+    ]);
+  }
+
+  @override
+  Future<void> updateItem(PantryItem item) async {
+    _publish([
+      for (final existing in _items) existing.id == item.id ? item : existing,
+    ]);
+  }
+
+  @override
+  Future<void> deleteItem(String id) async {
+    _publish(_items.where((item) => item.id != id).toList());
+  }
+
+  // Saves the new list and sends it to the other screens
+  void _publish(List<PantryItem> items) {
+    _items = items;
+    _changes.add(items);
+  }
+
+  /**
+   * Creates the starting items. Expiry dates are based on today.
+   */
+  ///
+  static List<PantryItem> _sampleItems() {
+    final now = DateTime.now();
+    var nextId = 0;
+
+    // Used only for sample data
+    PantryItem sample(
+      String name,
+      String category,
+      int quantity,
+      String unit,
+      int daysLeft,
+    ) {
+      return PantryItem(
+        id: 'sample-${nextId++}',
+        name: name,
+        category: category,
+        quantity: quantity,
+        unit: unit,
+        expirationDate: DateTime(now.year, now.month, now.day + daysLeft),
+      );
+    }
+
+    return [
+      sample('Milk', 'Dairy', 1, 'L', 1),
+      sample('Eggs', 'Dairy', 12, 'pack', 8),
+      sample('Cheddar Cheese', 'Dairy', 200, 'g', 15),
+      sample('Bell Pepper', 'Produce', 3, 'pieces', 3),
+      sample('Lettuce', 'Produce', 1, 'head', 6),
+      sample('Yogurt', 'Dairy', 500, 'g', 4),
+      sample('Butter', 'Dairy', 454, 'g', 30),
+      sample('Apples', 'Produce', 6, 'pieces', 12),
+      sample('Carrots', 'Produce', 1, 'kg', 14),
+      sample('Bananas', 'Produce', 5, 'pieces', 7),
+      sample('Chicken Breast', 'Meat & Seafood', 1, 'kg', 9),
+      sample('Ground Beef', 'Meat & Seafood', 500, 'g', 10),
+      sample('Salmon', 'Meat & Seafood', 2, 'fillets', 11),
+      sample('Frozen Peas', 'Frozen', 750, 'g', 120),
+      sample('Ice Cream', 'Frozen', 1, 'tub', 90),
+      sample('Orange Juice', 'Beverages', 1, 'L', 13),
+      sample('Coffee', 'Beverages', 340, 'g', 180),
+      sample('Whole Wheat Bread', 'Bakery', 1, 'loaf', 6),
+      sample('Bagels', 'Bakery', 6, 'pack', 8),
+      sample('White Rice', 'Pantry Staples', 2, 'kg', 365),
+      sample('Spaghetti', 'Pantry Staples', 900, 'g', 300),
+      sample('Flour', 'Pantry Staples', 2, 'kg', 200),
+      sample('Tomato Sauce', 'Pantry Staples', 680, 'mL', 240),
+      sample('Olive Oil', 'Other', 500, 'mL', 400),
+    ];
+  }
+}

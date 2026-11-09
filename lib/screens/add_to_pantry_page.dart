@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/expiry_reminder_time.dart';
+
 class AddToPantryPage extends StatefulWidget {
   final String barcode;
   final String productName;
@@ -89,6 +91,12 @@ class _AddToPantryPageState extends State<AddToPantryPage> {
     setState(() => _saving = true);
 
     try {
+      debugPrint('Expiration date: $_expirationDate');
+
+      final remindAt = calculateExpiryReminder(_expirationDate);
+
+      debugPrint('Calculated reminder: $remindAt');
+      debugPrint('Saving pantry item with remindAt=$remindAt');
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -100,6 +108,10 @@ class _AddToPantryPageState extends State<AddToPantryPage> {
             'expirationDate': _expirationDate == null
                 ? null
                 : Timestamp.fromDate(_expirationDate!),
+
+            // Expiration notification
+            'remindAt': remindAt == null ? null : Timestamp.fromDate(remindAt),
+
             'barcode': widget.barcode,
             'brand': widget.brand,
             'packageSize': widget.packageSize,
