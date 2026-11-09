@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../services/expiry_reminder_time.dart';
 
 class PantryScreen extends StatefulWidget {
   const PantryScreen({required this.user, super.key});
@@ -11,6 +12,13 @@ class PantryScreen extends StatefulWidget {
 }
 
 class _PantryScreenState extends State<PantryScreen> {
+  DateTime? _calculateReminderTime(DateTime? expirationDate) {
+    if (expirationDate == null) return null;
+
+    // Temporary five-minute notification test.
+    return DateTime.now().add(const Duration(minutes: 5));
+  }
+
   static const categories = <String>[
     'Dairy',
     'Produce',
@@ -60,6 +68,7 @@ class _PantryScreenState extends State<PantryScreen> {
   Future<void> _addItem() async {
     final name = _name.text.trim();
     final count = int.tryParse(_count.text.trim());
+
     if (name.isEmpty || count == null || count < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -70,8 +79,15 @@ class _PantryScreenState extends State<PantryScreen> {
       );
       return;
     }
+
     setState(() => _saving = true);
+
     try {
+      final remindAt = _calculateReminderTime(_expirationDate);
+
+      debugPrint('Expiration date: $_expirationDate');
+      debugPrint('Calculated reminder: $remindAt');
+
       await _items.add({
         'name': name,
         'count': count,
@@ -79,10 +95,15 @@ class _PantryScreenState extends State<PantryScreen> {
         'expirationDate': _expirationDate == null
             ? null
             : Timestamp.fromDate(_dateOnly(_expirationDate!)),
+        'remindAt': remindAt == null ? null : Timestamp.fromDate(remindAt),
         'createdAt': FieldValue.serverTimestamp(),
         'createdBy': widget.user.uid,
       });
+
+      debugPrint('Pantry item saved with reminder: $remindAt');
+
       if (!mounted) return;
+
       setState(() {
         _name.clear();
         _count.text = '1';
@@ -91,6 +112,7 @@ class _PantryScreenState extends State<PantryScreen> {
       });
     } on FirebaseException catch (error) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(error.message ?? error.code)));
@@ -219,6 +241,11 @@ class _PantryScreenState extends State<PantryScreen> {
                     'expirationDate': expiration == null
                         ? null
                         : Timestamp.fromDate(_dateOnly(expiration!)),
+                    'remindAt': calculateExpiryReminder(expiration) == null
+                        ? null
+                        : Timestamp.fromDate(
+                            calculateExpiryReminder(expiration)!,
+                          ),
                   });
                 },
                 child: const Text('Save'),
