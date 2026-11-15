@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 
 class OpenFoodFactsService {
   OpenFoodFactsService({http.Client? client})
-      : _client = client ?? http.Client(),
-        _ownsClient = client == null;
+    : _client = client ?? http.Client(),
+      _ownsClient = client == null;
 
   final http.Client _client;
   final bool _ownsClient;
@@ -17,13 +17,19 @@ class OpenFoodFactsService {
 
     final uri = Uri.parse('$baseUrl/api/v2/product/$barcode.json').replace(
       queryParameters: {
-        'fields': 'code,product_name,brands,categories_tags,image_front_url,quantity',
+        'fields':
+            'code,product_name,brands,categories_tags,image_front_url,quantity',
       },
     );
-    final response = await _client.get(uri, headers: {
-      // Replace with your team's genuine contact address before live use.
-      'User-Agent': 'SmartPantry/1.0 (38838)',
-    }).timeout(const Duration(seconds: 10));
+    final response = await _client
+        .get(
+          uri,
+          headers: {
+            // Replace with your team's genuine contact address before live use.
+            'User-Agent': 'SmartPantry/1.0 (38838)',
+          },
+        )
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode != 200) {
       throw Exception('Product lookup failed: ${response.statusCode}');
@@ -47,13 +53,29 @@ class OpenFoodFactsService {
 
   String _mapCategory(dynamic rawTags) {
     final tags = rawTags is List ? rawTags.join(' ').toLowerCase() : '';
-    if (tags.contains('milk') || tags.contains('cheese') || tags.contains('yogurt')) return 'Dairy';
+    if (tags.contains('milk') ||
+        tags.contains('cheese') ||
+        tags.contains('yogurt')) {
+      return 'Dairy';
+    }
     if (tags.contains('fruit') || tags.contains('vegetable')) return 'Produce';
-    if (tags.contains('meat') || tags.contains('fish') || tags.contains('seafood')) return 'Meat & Seafood';
+    if (tags.contains('meat') ||
+        tags.contains('fish') ||
+        tags.contains('seafood')) {
+      return 'Meat & Seafood';
+    }
     if (tags.contains('frozen')) return 'Frozen';
-    if (tags.contains('beverage') || tags.contains('drink') || tags.contains('juice')) return 'Beverages';
+    if (tags.contains('beverage') ||
+        tags.contains('drink') ||
+        tags.contains('juice')) {
+      return 'Beverages';
+    }
     if (tags.contains('bread') || tags.contains('bakery')) return 'Bakery';
-    if (tags.contains('pasta') || tags.contains('rice') || tags.contains('cereal')) return 'Pantry Staples';
+    if (tags.contains('pasta') ||
+        tags.contains('rice') ||
+        tags.contains('cereal')) {
+      return 'Pantry Staples';
+    }
     return 'Other';
   }
 

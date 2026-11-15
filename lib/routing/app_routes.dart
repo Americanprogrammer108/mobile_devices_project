@@ -5,10 +5,10 @@
 import 'package:flutter/material.dart';
 
 import '../bottom_nav.dart';
-import '../features/barcode_scanner/barcode_scanner_screen.dart';
 import '../features/history/history_screen.dart';
 import '../features/product_details/product_details_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../screens/scanner_page.dart';
 
 class AppRoutes {
   static const home = '/';
@@ -20,10 +20,8 @@ class AppRoutes {
   static final Map<String, WidgetBuilder> routes = {
     home: (_) => const BottomNav(),
     productDetails: (_) => const ProductDetailsScreen(),
-    scanner: (_) => const BarcodeScannerScreen(),
+    scanner: (_) => const ScannerPage(),
     history: (_) => const HistoryScreen(),
     settings: (_) => const SettingsScreen(),
   };
 }
-
-

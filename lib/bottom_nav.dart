@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_devices_project/screens/product_lookup_page.dart';
 
 import 'features/home/home_screen.dart';
 import 'features/pantry/pantry_screen.dart';
 import 'features/shopping_list/shopping_list_screen.dart';
-import 'features/product_search/product_search_screen.dart';
 import 'routing/app_routes.dart';
 
 class BottomNav extends StatefulWidget {
@@ -20,7 +20,7 @@ class _BottomNavState extends State<BottomNav> {
     HomeScreen(onSeeAll: () => _onTabTapped(1)),
     PantryScreen(),
     ShoppingListScreen(),
-    ProductSearchScreen(),
+    ProductLookupPage(),
   ];
 
   void _onTabTapped(int index) {

@@ -17,6 +17,8 @@ class PantryReminder {
 }
 
 class NotificationService {
+  final Map<int, DateTime> _scheduledTimes = {};
+  final Map<int, String> _scheduledNames = {};
   NotificationService._(this._plugin);
 
   static const _channel = AndroidNotificationChannel(
@@ -81,7 +83,7 @@ class NotificationService {
           priority: Priority.high,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: 'test:expiry',
     );
 
@@ -169,27 +171,37 @@ class NotificationService {
 
     final desired = {
       for (final reminder in reminders)
-        if (reminder.remindAt.isAfter(now)) reminder.id: reminder,
+        if (reminder.remindAt.isAfter(now))
+          _notificationId(reminder.id): reminder,
     };
-
-    final desiredNotificationIds = desired.keys.map(_notificationId).toSet();
 
     final pending = await _plugin.pendingNotificationRequests();
 
-    // Cancel local expiry notifications for deleted or expired Firestore items.
-    for (final notification in pending) {
-      final isExpiryNotification =
-          notification.payload?.startsWith('expiry:') ?? false;
+    final pendingExpiryIds = pending
+        .where(
+          (notification) =>
+              notification.payload?.startsWith('expiry:') ?? false,
+        )
+        .map((notification) => notification.id)
+        .toSet();
 
-      if (isExpiryNotification &&
-          !desiredNotificationIds.contains(notification.id)) {
-        await _plugin.cancel(id: notification.id);
-      }
+    // Cancel notifications that are no longer required.
+    for (final id in pendingExpiryIds.difference(desired.keys.toSet())) {
+      await _plugin.cancel(id: id);
+      _scheduledTimes.remove(id);
+      _scheduledNames.remove(id);
     }
 
-    // Replace notifications when a Firestore reminder time changes.
-    for (final reminder in desired.values) {
-      final id = _notificationId(reminder.id);
+    for (final entry in desired.entries) {
+      final id = entry.key;
+      final reminder = entry.value;
+
+      final unchanged =
+          pendingExpiryIds.contains(id) &&
+          _scheduledTimes[id] == reminder.remindAt &&
+          _scheduledNames[id] == reminder.name;
+
+      if (unchanged) continue;
 
       await _plugin.cancel(id: id);
 
@@ -211,6 +223,15 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: 'expiry:${reminder.id}',
       );
+
+      debugPrint(
+        'Expiry reminder scheduled: '
+        '${reminder.name} | '
+        '${reminder.remindAt.toLocal()}',
+      );
+
+      _scheduledTimes[id] = reminder.remindAt;
+      _scheduledNames[id] = reminder.name;
     }
   }
 

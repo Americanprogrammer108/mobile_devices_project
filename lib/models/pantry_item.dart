@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PantryItem {
@@ -21,8 +20,8 @@ class PantryItem {
   });
 
   factory PantryItem.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> document,
-      ) {
+    DocumentSnapshot<Map<String, dynamic>> document,
+  ) {
     final data = document.data()!;
 
     return PantryItem(
@@ -31,8 +30,7 @@ class PantryItem {
       category: data['category'] as String,
       quantity: (data['quantity'] as num).toInt(),
       unit: data['unit'] as String,
-      expirationDate:
-      (data['expirationDate'] as Timestamp?)?.toDate(),
+      expirationDate: (data['expirationDate'] as Timestamp?)?.toDate(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
   }
