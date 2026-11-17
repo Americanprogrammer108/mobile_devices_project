@@ -26,7 +26,6 @@ class PantryScreen extends StatefulWidget {
 }
 
 class _PantryScreenState extends State<PantryScreen> {
-
   // Created once so reubuilding the widget does not restart the stream
   final _items = pantryDataSource.watchItems();
   String _filter = 'All';

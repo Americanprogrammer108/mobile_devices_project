@@ -9,7 +9,6 @@ class ShoppingListScreen extends StatefulWidget {
 }
 
 class _ShoppingListScreenState extends State<ShoppingListScreen> {
-
   // Filters (all, toBuy, purchased) for the shopping list
   static const List<String> filters = ['All', 'To Buy', 'Purchased'];
 
@@ -17,14 +16,54 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
   // mock products for the shopping list (name and default image)
   final List<Map<String, dynamic>> mockProducts = [
-    {'name': 'Milk', 'image': const Icon(Icons.local_drink), 'purchased': false, 'quantity': 1},
-    {'name': 'Bananas', 'image': const Icon(Icons.apple), 'purchased': false, 'quantity': 6},
-    {'name': 'Bread', 'image': const Icon(Icons.bakery_dining), 'purchased': false, 'quantity': 1},
-    {'name': 'Chicken', 'image': const Icon(Icons.set_meal), 'purchased': false, 'quantity': 2},
-    {'name': 'Tomatoes', 'image': const Icon(Icons.local_florist), 'purchased': false, 'quantity': 4},
-    {'name': 'Pasta', 'image': const Icon(Icons.dinner_dining), 'purchased': false, 'quantity': 1},
-    {'name': 'Eggs', 'image': const Icon(Icons.egg), 'purchased': true, 'quantity': 1},
-    {'name': 'Onions', 'image': const Icon(Icons.spa), 'purchased': true, 'quantity': 3},
+    {
+      'name': 'Milk',
+      'image': const Icon(Icons.local_drink),
+      'purchased': false,
+      'quantity': 1,
+    },
+    {
+      'name': 'Bananas',
+      'image': const Icon(Icons.apple),
+      'purchased': false,
+      'quantity': 6,
+    },
+    {
+      'name': 'Bread',
+      'image': const Icon(Icons.bakery_dining),
+      'purchased': false,
+      'quantity': 1,
+    },
+    {
+      'name': 'Chicken',
+      'image': const Icon(Icons.set_meal),
+      'purchased': false,
+      'quantity': 2,
+    },
+    {
+      'name': 'Tomatoes',
+      'image': const Icon(Icons.local_florist),
+      'purchased': false,
+      'quantity': 4,
+    },
+    {
+      'name': 'Pasta',
+      'image': const Icon(Icons.dinner_dining),
+      'purchased': false,
+      'quantity': 1,
+    },
+    {
+      'name': 'Eggs',
+      'image': const Icon(Icons.egg),
+      'purchased': true,
+      'quantity': 1,
+    },
+    {
+      'name': 'Onions',
+      'image': const Icon(Icons.spa),
+      'purchased': true,
+      'quantity': 3,
+    },
   ];
 
   int getFilterCounts(String filter) {
@@ -36,7 +75,6 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       return mockProducts.length;
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +89,9 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => const ProductSearchScreen(),
-                )
-              ); 
-            }
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.add),
@@ -67,11 +105,11 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                     // content: Import the add item manually widget here
                     content: const Text('Add item widget to be added'),
                   );
-                }
+                },
               );
-            }
+            },
           ),
-        ]
+        ],
       ),
       body: Column(
         children: [
@@ -86,12 +124,17 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                   });
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: currentFilter == filter ? Colors.green : Colors.grey.shade200
+                  backgroundColor: currentFilter == filter
+                      ? Colors.green
+                      : Colors.grey.shade200,
                 ),
-                child: Text('$filter ${(filter != 'All' ? {getFilterCounts(filter)} : '')}', 
+                child: Text(
+                  '$filter ${(filter != 'All' ? {getFilterCounts(filter)} : '')}',
                   style: TextStyle(
-                    color: currentFilter == filter ? Colors.white : Colors.grey.shade800
-                  )
+                    color: currentFilter == filter
+                        ? Colors.white
+                        : Colors.grey.shade800,
+                  ),
                 ),
               );
             }).toList(),
@@ -100,14 +143,14 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           Expanded(
             child: ListView(
               children: [
-                if (currentFilter == 'All' || currentFilter == 'To Buy') 
+                if (currentFilter == 'All' || currentFilter == 'To Buy')
                   buildProductSection('To Buy', false),
                 if (currentFilter == 'All' || currentFilter == 'Purchased')
-                  buildProductSection('Purchased', true)
-              ]
-            )
-          )
-        ]
+                  buildProductSection('Purchased', true),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -138,7 +181,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
         ...products.map((product) => buildProductRow(product)),
       ],
     );
-  }  
+  }
 
   // build product rows
   Widget buildProductRow(Map<String, dynamic> product) {
@@ -185,13 +228,15 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.remove),
-                  onPressed: purchased ? null : () {
-                    setState(() {
-                      if (product['quantity'] > 1) {
-                        product['quantity']--;
-                      }
-                    });
-                  },
+                  onPressed: purchased
+                      ? null
+                      : () {
+                          setState(() {
+                            if (product['quantity'] > 1) {
+                              product['quantity']--;
+                            }
+                          });
+                        },
                 ),
 
                 Text('${product['quantity']}'),
@@ -211,10 +256,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           ),
 
           IconButton(
-            icon: const Icon(
-              Icons.delete,
-              color: Colors.red,
-            ),
+            icon: const Icon(Icons.delete, color: Colors.red),
             onPressed: () {
               setState(() {
                 mockProducts.remove(product);

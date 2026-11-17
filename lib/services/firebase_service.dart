@@ -1,17 +1,16 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/pantry_item.dart';
 
 class FirestoreService {
-  final CollectionReference<Map<String, dynamic>> _pantry =
-  FirebaseFirestore.instance.collection('pantry_items');
+  final CollectionReference<Map<String, dynamic>> _pantry = FirebaseFirestore
+      .instance
+      .collection('pantry_items');
 
   // Read all pantry items in real time.
   Stream<List<PantryItem>> getPantryItems() {
     return _pantry.snapshots().map(
-          (snapshot) => snapshot.docs
-          .map((doc) => PantryItem.fromFirestore(doc))
-          .toList(),
+      (snapshot) =>
+          snapshot.docs.map((doc) => PantryItem.fromFirestore(doc)).toList(),
     );
   }
 

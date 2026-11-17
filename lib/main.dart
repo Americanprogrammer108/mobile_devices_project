@@ -8,11 +8,12 @@ import 'package:mobile_devices_project/services/expiry_notification_binding.dart
 import 'package:mobile_devices_project/services/notification_services.dart';
 import 'package:mobile_devices_project/theme/app_theme.dart';
 import 'bottom_nav.dart';
-import 'features/barcode_scanner/barcode_scanner_screen.dart';
-import 'features/history/history_screen.dart';
-import 'features/product_details/product_details_screen.dart';
-import 'features/settings/settings_screen.dart';
 import 'firebase_options.dart';
+import 'dart:async';
+
+import 'package:mobile_devices_project/services/expiry_reminder_time.dart';
+import 'package:mobile_devices_project/services/notification_preferences.dart';
+import 'package:mobile_devices_project/services/notification_preferences_repository.dart';
 
 import 'package:openfoodfacts/openfoodfacts.dart' as off;
 
@@ -35,51 +36,137 @@ Future<void> main() async {
 }
 
 Stream<List<PantryReminder>> watchPantryReminders(String uid) {
-  return FirebaseFirestore.instance
-      .collection('users')
-      .doc(uid)
-      .collection('items')
-      .snapshots()
-      .map((snapshot) {
-        final reminders = <PantryReminder>[];
+  late final StreamController<List<PantryReminder>> controller;
 
-        for (final document in snapshot.docs) {
-          final data = document.data();
-          final remindAt = data['remindAt'];
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? itemsSubscription;
+  StreamSubscription<NotificationPreferences>? preferencesSubscription;
 
-          if (remindAt is! Timestamp) continue;
+  QuerySnapshot<Map<String, dynamic>>? latestItems;
+  NotificationPreferences? latestPreferences;
 
-          reminders.add(
-            PantryReminder(
-              id: document.id,
-              name: data['name'] as String? ?? 'Unnamed item',
-              remindAt: remindAt.toDate(),
-            ),
-          );
-        }
+  void emitReminders() {
+    if (controller.isClosed ||
+        latestItems == null ||
+        latestPreferences == null) {
+      return;
+    }
 
-        return reminders;
-      })
-      .handleError((Object error) {
-        debugPrint('Firestore reminder stream ERROR: $error');
-      });
+    final preferences = latestPreferences!;
+
+    if (!preferences.expirationWarnings) {
+      controller.add(const <PantryReminder>[]);
+      return;
+    }
+
+    final reminders = <PantryReminder>[];
+
+    for (final document in latestItems!.docs) {
+      final data = document.data();
+      final expirationDate = data['expirationDate'];
+
+      if (expirationDate is! Timestamp) continue;
+
+      final remindAt = calculateExpiryReminder(
+        expirationDate.toDate(),
+        daysBefore: preferences.daysBeforeExpiry,
+      );
+
+      if (remindAt == null) continue;
+
+      reminders.add(
+        PantryReminder(
+          id: document.id,
+          name: data['name'] as String? ?? 'Unnamed item',
+          remindAt: remindAt,
+        ),
+      );
+    }
+
+    controller.add(reminders);
+  }
+
+  controller = StreamController<List<PantryReminder>>(
+    onListen: () {
+      final firestore = FirebaseFirestore.instance;
+
+      itemsSubscription = firestore
+          .collection('users')
+          .doc(uid)
+          .collection('items')
+          .snapshots()
+          .listen((snapshot) {
+            latestItems = snapshot;
+            emitReminders();
+          }, onError: controller.addError);
+
+      final repository = NotificationPreferencesRepository(firestore);
+
+      preferencesSubscription = repository.watch(uid).listen((preferences) {
+        latestPreferences = preferences;
+        emitReminders();
+      }, onError: controller.addError);
+    },
+    onCancel: () async {
+      await itemsSubscription?.cancel();
+      await preferencesSubscription?.cancel();
+    },
+  );
+
+  return controller.stream;
 }
 
 late final NotificationService notificationService;
 late final ExpiryNotificationBinding notificationBinding;
+
+Future<void> _authQueue = Future<void>.value();
+int _authGeneration = 0;
 
 Future<void> startAppServices() async {
   notificationService = await NotificationService.create();
 
   notificationBinding = ExpiryNotificationBinding(notificationService);
 
-  FirebaseAuth.instance.authStateChanges().listen((user) async {
-    if (user == null) {
-      await notificationBinding.stop(clearNotifications: true);
-      return;
-    }
+  FirebaseAuth.instance.authStateChanges().listen((user) {
+    final generation = ++_authGeneration;
+    final uid = user?.uid;
 
-    await notificationBinding.start(watchPantryReminders(user.uid));
+    _authQueue = _authQueue
+        .catchError((Object error, StackTrace stackTrace) {
+          debugPrint('Previous auth transition failed: $error');
+        })
+        .then((_) async {
+          // Ignore an outdated authentication event.
+          if (generation != _authGeneration) return;
+
+          debugPrint(
+            'Processing notification auth transition: '
+            '${uid == null ? "signed out" : "signed in"}',
+          );
+
+          // Stop the old Firestore listeners and clear reminders.
+          await notificationBinding.stop(clearNotifications: true);
+
+          // A newer authentication event may have arrived.
+          if (generation != _authGeneration) return;
+
+          if (uid == null) {
+            debugPrint('Notification auth transition: signed out');
+            return;
+          }
+
+          // Confirm this is still the authenticated account.
+          if (FirebaseAuth.instance.currentUser?.uid != uid) {
+            return;
+          }
+
+          await notificationBinding.start(watchPantryReminders(uid));
+
+          debugPrint('Notification auth transition: listener started');
+        })
+        .catchError((Object error, StackTrace stackTrace) {
+          debugPrint('Notification auth transition failed: $error');
+          debugPrintStack(stackTrace: stackTrace);
+        });
   });
 }
 
@@ -94,12 +181,7 @@ class SmartPantryApp extends StatelessWidget {
       home: const AuthGate(),
       // Keep the skeleton routes for settings/history/product detail/etc.
       // Its '/' route is deliberately omitted: AuthGate owns the app entry.
-      routes: {
-        AppRoutes.productDetails: (_) => const ProductDetailsScreen(),
-        AppRoutes.scanner: (_) => const BarcodeScannerScreen(),
-        AppRoutes.history: (_) => const HistoryScreen(),
-        AppRoutes.settings: (_) => const SettingsScreen(),
-      },
+      routes: {...AppRoutes.routes}..remove('/'),
     );
   }
 }

@@ -80,7 +80,8 @@ class FireStonePantryDataSource implements PantryDataSource {
   /**
    * Turns a Firestore document into a PantryItem. Used instead of PantryItem.fromFirestore
    * which crashes on items saved with 'count' instead of 'quantity' and 'unit'.
-   *////
+   */
+  ///
   PantryItem _fromDoc(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
     return PantryItem(

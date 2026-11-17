@@ -5,7 +5,8 @@ import './scanner_page.dart';
 import '../services/pantry_category_mapper.dart';
 
 class ProductLookupPage extends StatefulWidget {
-  const ProductLookupPage({super.key});
+  final String? initialBarcode;
+  const ProductLookupPage({super.key, this.initialBarcode});
 
   @override
   State<ProductLookupPage> createState() => _ProductLookupPageState();
@@ -23,8 +24,6 @@ class _ProductLookupPageState extends State<ProductLookupPage> {
   // earlier barcode and must be ignored. This is what makes repeated
   // lookups safe.
   int _requestId = 0;
-
-
 
   Future<void> _lookup() async {
     final barcode = _normalizeBarcode(_controller.text);
@@ -69,8 +68,7 @@ class _ProductLookupPageState extends State<ProductLookupPage> {
         }
         _loading = false;
       });
-    }
-    catch (e, stackTrace) {
+    } catch (e, stackTrace) {
       if (!mounted || requestId != _requestId) return;
       debugPrint('Open Food Facts lookup error: $e');
       debugPrintStack(stackTrace: stackTrace);
@@ -205,9 +203,19 @@ class _ProductLookupPageState extends State<ProductLookupPage> {
                 if (!mounted) return;
 
                 if (saved == true) {
+                  setState(() {
+                    _controller.clear();
+                    _product = null;
+                    _error = null;
+                    _loading = false;
+                    _requestId++;
+                  });
+
                   messenger.showSnackBar(
                     const SnackBar(
-                      content: Text('Pantry updated successfully!'),
+                      content: Text(
+                        'Product added successfully! Ready to scan another.',
+                      ),
                     ),
                   );
                 }
@@ -256,8 +264,7 @@ class _ProductLookupPageState extends State<ProductLookupPage> {
   String _normalizeBarcode(String barcode) {
     final cleaned = barcode.trim();
 
-    if (cleaned.length == 12 &&
-        RegExp(r'^\d{12}$').hasMatch(cleaned)) {
+    if (cleaned.length == 12 && RegExp(r'^\d{12}$').hasMatch(cleaned)) {
       return '0$cleaned';
     }
 

@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -27,9 +26,9 @@ class _SignInScreenState extends State<SignInScreen> {
       await action();
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message ?? error.code)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message ?? error.code)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -58,26 +57,26 @@ class _SignInScreenState extends State<SignInScreen> {
               onPressed: _busy
                   ? null
                   : () => _run(
-                    () => FirebaseAuth.instance
-                    .signInWithEmailAndPassword(
-                  email: _email.text.trim(),
-                  password: _password.text,
-                )
-                    .then<void>((_) {}),
-              ),
+                      () => FirebaseAuth.instance
+                          .signInWithEmailAndPassword(
+                            email: _email.text.trim(),
+                            password: _password.text,
+                          )
+                          .then<void>((_) {}),
+                    ),
               child: const Text('Sign in'),
             ),
             TextButton(
               onPressed: _busy
                   ? null
                   : () => _run(
-                    () => FirebaseAuth.instance
-                    .createUserWithEmailAndPassword(
-                  email: _email.text.trim(),
-                  password: _password.text,
-                )
-                    .then<void>((_) {}),
-              ),
+                      () => FirebaseAuth.instance
+                          .createUserWithEmailAndPassword(
+                            email: _email.text.trim(),
+                            password: _password.text,
+                          )
+                          .then<void>((_) {}),
+                    ),
               child: const Text('Create account'),
             ),
           ],
