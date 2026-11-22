@@ -259,9 +259,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           ElevatedButton(
-            onPressed: () => setState(() {
-              FirebaseAuth.instance.signOut();
-            }),
+            onPressed: () async {
+              try {
+                await FirebaseAuth.instance.signOut();
+
+                if (!context.mounted) return;
+
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              } catch (error) {
+                if (!context.mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Unable to log out: $error'),
+                  ),
+                );
+              }
+            },
             child: const Text('Log out'),
           ),
         ],
